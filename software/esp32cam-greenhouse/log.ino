@@ -24,7 +24,7 @@ void logSave(fs::FS &fs)
   logSaveFolder(fs);
 
   String path = "/logs/" + String(timeinfo.tm_year + 1900) + "-" + String(timeinfo.tm_mon + 1) + "/" 
-    + String(timeinfo.tm_year) + "-" + String(timeinfo.tm_mon + 1) + "-" + String(timeinfo.tm_mday) + ".csv";
+    + String(timeinfo.tm_year + 1900) + "-" + String(timeinfo.tm_mon + 1) + "-" + String(timeinfo.tm_mday) + ".csv";
 
   File file = fs.open(path.c_str(), FILE_APPEND);
   if(!file){
