@@ -4,5 +4,4 @@ void setupTime()
   if(getLocalTime(&timeinfo)){
     isTimeSynced = true;
   }
-
 }

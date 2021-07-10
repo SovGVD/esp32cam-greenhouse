@@ -1,3 +1,5 @@
+// TODO make is as one of the sensor???
+
 
 /*********
  * Camera code inspired by and copy-pasted from:
@@ -17,8 +19,12 @@
 *********/
 
 #ifdef CAMERA_ENABLED
+uint8_t cameraPicCount = 0;
+
 void setupCamera(fs::FS &fs)
 {
+  cliSerial->println("Try ESP32CAM");
+
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -50,14 +56,17 @@ void setupCamera(fs::FS &fs)
     config.jpeg_quality = 12;
     config.fb_count = 1;
   }
+
+  cliSerial->println("ESP32CAM initialisation...");
   
   // Init Camera
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
-    Serial.printf("Camera init failed with error 0x%x", err);
+    cliSerial->printf("Camera init failed with error 0x%x", err);
     return;
   }
 
+  cliSerial->println("ESP32CAM cam settings...");
   sensor_t * s = esp_camera_sensor_get();
   s->set_brightness(s, 0);     // -2 to 2
   s->set_contrast(s, 0);       // -2 to 2
@@ -85,12 +94,15 @@ void setupCamera(fs::FS &fs)
 
   // setup folder
   if (isStorageAvailable) {
-    String path = "/pics";
+    cliSerial->println("ESP32CAM check or create folder");
+    String path = "/" + String(PIC_FOLDER);
     if (!fs.exists(path)) {
       fs.mkdir(path);
     }
   }
 
+  cliSerial->println("ESP32CAM init finished");
+  appendSensor(0, SENSOR_ESP32CAM, 0x0, VALUE_TYPE_JPEG);
 }
 
 void cameraSaveFolder(fs::FS &fs)
@@ -99,18 +111,36 @@ void cameraSaveFolder(fs::FS &fs)
     return;
   }
 
-  String path = "/pics/" + String(timeinfo.tm_year + 1900) + "-" + String(timeinfo.tm_mon + 1);
+  String path = "/" + String(PIC_FOLDER) + "/" + getNameYM();
   if (!fs.exists(path)) {
     fs.mkdir(path);
   }
   
 }
 
+void askSensor_ESP32CAM(uint8_t idx, bool forceAction)
+{
+  if ((cameraPicCount > 3 && isTimeSynced) || (forceAction && !sensors[idx].isDataReady)) {
+    if (takePhoto(SD_MMC)) {
+      sensors[idx].value = 1;
+      sensors[idx].isDataReady = true;
+    } else {
+      sensors[idx].value = 0;
+      sensors[idx].isDataReady = true;
+      sensors[idx].isDataFailed = true;
+    }
 
-void takePhoto(fs::FS &fs)
+    return;
+  }
+
+  cameraPicCount++;
+}
+
+
+bool takePhoto(fs::FS &fs)
 {
   if (!isStorageAvailable) {
-    return;
+    return false;
   }
 
   cameraSaveFolder(fs);
@@ -119,26 +149,25 @@ void takePhoto(fs::FS &fs)
   fb = esp_camera_fb_get();
  
   if(!fb) {
-    Serial.println("Camera capture failed");
-    return;
+    cliSerial->println("Camera capture failed");
+    return false;
   }
 
   // Path where new picture will be saved in SD Card
-    String path = "/pics/" + String(timeinfo.tm_year + 1900) + "-" + String(timeinfo.tm_mon + 1) + "/" 
-    + String(timeinfo.tm_year + 1900) + "-" + String(timeinfo.tm_mon + 1) + "-" + String(timeinfo.tm_mday) + "-" 
-    + String(timeinfo.tm_hour) + "-" + String(timeinfo.tm_min) + "-" + String(timeinfo.tm_sec) + ".jpg";
+  String path = "/" + String(PIC_FOLDER) + "/" + getNameYM() + "/" + getNameYMDHIS() + "-" + String(bootCounter) + ".jpg";
 
-  Serial.printf("Picture file name: %s\n", path.c_str());
+  cliSerial->printf("Picture file name: %s\n", path.c_str());
   
   File file = fs.open(path.c_str(), FILE_WRITE);
   if(!file){
-    Serial.println("Failed to open file in writing mode");
-  } 
-  else {
+    cliSerial->println("Failed to open file in writing mode");
+  } else {
     file.write(fb->buf, fb->len); // payload (image), payload length
-    Serial.printf("Saved file to path: %s\n", path.c_str());
+    cliSerial->printf("Saved file to path: %s\n", path.c_str());
   }
   file.close();
-  esp_camera_fb_return(fb); 
+  
+  esp_camera_fb_return(fb);
+  return !!file;
 }
 #endif

@@ -15,10 +15,21 @@
 #include <EEPROM.h>            // read and write from flash memory
 #include <WiFi.h>
 #include "time.h"
+#include <Wire.h>
 
 #include "def.h"
 #include "config.wifi.h"
 #include "config.h"
+
+// Sensors libraries (maybe it is bad idea to autodetect sensors)
+#include "Adafruit_CCS811.h"
+Adafruit_CCS811 ccs811;
+
+#include<ADS1115_WE.h>
+ADS1115_WE ads1115 = ADS1115_WE();
+
+#include "ClosedCube_HDC1080.h"
+ClosedCube_HDC1080 hdc1080;
 
 #ifdef CAMERA_ENABLED
   camera_fb_t * fb = NULL;  
@@ -26,34 +37,80 @@
 
 struct tm timeinfo;
 bool isStorageAvailable = false;
-RTC_DATA_ATTR bool isTimeSynced = false;
 
+// CLI
+Stream *cliSerial;
+
+RTC_DATA_ATTR uint16_t bootCounter = 0;
+
+// Flags
+RTC_DATA_ATTR bool isTimeSynced = false;
+bool isWiFiConnected = false;
+bool isWaitingAllDone = true;
+bool isFail = false;
+
+// Sensors storage
+uint8_t currentRecordIndex = 0;
+uint8_t maxRecordsIndex = 0;
+recordStructure sensors[255] = {};
+
+// Timer
+unsigned long startedAt;
+unsigned long currentTime;
+unsigned long previousTime;
 
 void setup() {
+  bootCounter++;  // TODO resync time
+  startedAt = millis();
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
- 
-  Serial.begin(115200);
+
+  Serial.begin(SERIAL_BAUD);
+  cliSerial = &Serial;
+
+  cliSerial->print("Boot No ");
+  cliSerial->println(bootCounter);
+
+  if (!isTimeSynced) {
+    cliSerial->print("Time is not synced");
+    setupWiFi();
+  } else {
+    getLocalTime(&timeinfo);
+  }
+  
   setupStorage();
-  #ifdef CAMERA_ENABLED
-    setupCamera(SD_MMC);
-  #endif
   setupSleep();
   setupLog(SD_MMC);
 
-  if (!isTimeSynced) {
-    setupWiFi();
-    setupTime();
-  }
+  #ifdef CAMERA_ENABLED
+    setupCamera(SD_MMC);
+  #endif
+
+  Wire.begin(I2C_SDA, I2C_SCL);
+  //Wire.setClock(400000);
+  autodetectSensors();
 }
 
 void loop() {
-  logSave(SD_MMC);
-  #ifdef CAMERA_ENABLED
-    takePhoto(SD_MMC);
-  #endif
+  cliSerial->println("Loop start");
+  while (isWaitingAllDone) {
+    currentTime = millis();
+
+    if (currentTime - previousTime >= SENSOR_DELAY) {
+      previousTime = currentTime;
+      askSensors(SENSORS_NORMAL);
+    }
+
+    // Don't wait too long
+    if (currentTime - startedAt >= MAX_TIMER) {
+      isFail = true;
+    }
+
+    if ((isSensorsDataReady() && isTimeSynced) || isFail) {
+      askSensors(SENSORS_FORCE); // Final attempt for camera and maybe other sensors
+      logSave(SD_MMC);
+      isWaitingAllDone = false;
+    }
+  }
   
-  Serial.println("Going to sleep now");
-  esp_deep_sleep_start();
-  Serial.println("This will never be printed");
-  
+  doSleep();
 }

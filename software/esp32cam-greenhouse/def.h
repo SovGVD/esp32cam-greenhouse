@@ -21,3 +21,40 @@
 #define PCLK_GPIO_NUM     22
 
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
+
+#define SENSOR_ID_MAX 4
+
+#define LOG_FOLDER "logs"
+#define PIC_FOLDER "pics"
+
+// Sensors:
+// 0x40 HDC1080          Humidity/Temperature
+// 0x5A CCS811           Air Quality
+// 0x48 ADS1115/ADS1015  ADC (soil sensors)
+
+#define SENSORS_NORMAL false
+#define SENSORS_FORCE  true
+
+#define SENSOR_ESP32CAM 0
+#define SENSOR_HDC1080  1
+#define SENSOR_CCS811   2
+#define SENSOR_ADS1115  3
+
+#define VALUE_TYPE_RAW         0
+#define VALUE_TYPE_JPEG        1
+#define VALUE_TYPE_TEMPERATURE 2
+#define VALUE_TYPE_HUMIDITY    3
+#define VALUE_TYPE_CO2         4
+#define VALUE_TYPE_TVOC        5
+
+typedef struct {
+  uint8_t channel;  // For TCA, 0 - without TCA
+  uint8_t type;
+  uint8_t num;
+  char address;
+  uint8_t valueType;
+  double value;
+  bool isDataStored;
+  bool isDataReady;
+  bool isDataFailed;
+} recordStructure;
