@@ -6,7 +6,7 @@ void autodetectSensors()
 {
   i2cScan();
   initHumidity();
-  //initAir(); // it makes initHumidity return wrong values
+  initAir();
   initSoil();
 }
 
@@ -21,28 +21,28 @@ void askSensors(bool forceAction)
     switch(sensors[idx].type) {
       #ifdef CAMERA_ENABLED
         case SENSOR_ESP32CAM:
-          cliSerial->println("SENSOR_ESP32CAM");
+          //cliSerial->println("SENSOR_ESP32CAM");
           askSensor_ESP32CAM(idx, forceAction);
           break;
       #endif
 
       case SENSOR_SD_MMC:
-        cliSerial->println("SENSOR_SD_MMC");
+        //cliSerial->println("SENSOR_SD_MMC");
         askSensor_SD_MMC(idx, forceAction);
         break;
 
       case SENSOR_HDC1080:
-        cliSerial->println("SENSOR_HDC1080");
+        //cliSerial->println("SENSOR_HDC1080");
         askSensor_HDC1080(idx, forceAction);
         break;
 
       case SENSOR_CCS811:
-        cliSerial->println("SENSOR_CCS811");
+        //cliSerial->println("SENSOR_CCS811");
         askSensor_CCS811(idx, forceAction);
         break;
 
       case SENSOR_ADS1115:
-        cliSerial->println("SENSOR_ADS1115");
+        //cliSerial->println("SENSOR_ADS1115");
         askSensor_ADS1115(idx, forceAction);
         break;
     }
@@ -91,9 +91,23 @@ void askSensor_HDC1080(uint8_t idx, bool forceAction)
 
 void askSensor_CCS811(uint8_t idx, bool forceAction)
 {
-  delay(100);
+
+  float temperatureCCS811 = getDataForCCS811(idx, VALUE_TYPE_TEMPERATURE);
+  float humidityCCS811    = getDataForCCS811(idx, VALUE_TYPE_HUMIDITY);
+
+  if (temperatureCCS811 == SENSOR_ERROR_VALUE || humidityCCS811 == SENSOR_ERROR_VALUE) {
+    return;
+  }
+
   // TODO what if another address?
+
   if(ccs811.available()) {
+    if (!sensors[idx].isPrepareMode) {
+      ccs811.setEnvironmentalData(humidityCCS811, temperatureCCS811);
+      //ccs811.setDriveMode(CCS811_DRIVE_MODE_1SEC);
+      sensors[idx].isPrepareMode = true;
+      delay(1100);
+    }
     if(!ccs811.readData()) {
       switch(sensors[idx].valueType) {
         case VALUE_TYPE_CO2:
@@ -103,8 +117,8 @@ void askSensor_CCS811(uint8_t idx, bool forceAction)
           }
 
           sensorValueUInt16 = ccs811.geteCO2();
-          if (sensorValueUInt16 != 400) {
-            cliSerial->print("CO2: ");
+          if (sensorValueUInt16 != 400 && sensorValueUInt16 != 0) {
+            cliSerial->print("eCO2: ");
             cliSerial->println(sensorValueUInt16);
             sensors[idx].value = sensorValueUInt16;
             sensors[idx].isDataReady = true;
@@ -125,11 +139,15 @@ void askSensor_CCS811(uint8_t idx, bool forceAction)
             cliSerial->println(sensorValueUInt16);
             sensors[idx].value = sensorValueUInt16;
             sensors[idx].isDataReady = true;
+            ccs811.setDriveMode(CCS811_DRIVE_MODE_IDLE);
+            sensors[idx].isPrepareMode = false;
           } else {
             sensors[idx].retry++;
           }
           break;
         default:
+          ccs811.setDriveMode(CCS811_DRIVE_MODE_IDLE);
+          sensors[idx].isPrepareMode = false;
           askSensor_CCS811_error_noData(idx);
           return;
           break;

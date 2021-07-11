@@ -35,6 +35,8 @@
 #define CAM_WB_ADJUST_FRAMES 4
 #define SENSOR_RETRY 5
 
+#define SENSOR_ERROR_VALUE -99999.9
+
 #define SENSORS_NORMAL false
 #define SENSORS_FORCE  true
 
@@ -66,5 +68,6 @@ typedef struct {
   bool isDataStored;
   bool isDataReady;
   bool isDataFailed;
+  bool isPrepareMode;
   uint8_t retry;
 } recordStructure;

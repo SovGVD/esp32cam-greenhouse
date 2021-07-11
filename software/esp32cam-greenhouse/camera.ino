@@ -23,7 +23,7 @@ uint8_t cameraPicCount = 0;
 
 void setupCamera(fs::FS &fs)
 {
-  cliSerial->println("Try ESP32CAM");
+  //cliSerial->println("Try ESP32CAM");
 
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_5;
@@ -57,7 +57,7 @@ void setupCamera(fs::FS &fs)
     config.fb_count = 1;
   }
 
-  cliSerial->println("ESP32CAM initialisation...");
+  //cliSerial->println("ESP32CAM initialisation...");
   
   // Init Camera
   esp_err_t err = esp_camera_init(&config);
@@ -66,7 +66,7 @@ void setupCamera(fs::FS &fs)
     return;
   }
 
-  cliSerial->println("ESP32CAM cam settings...");
+  //cliSerial->println("ESP32CAM cam settings...");
   sensor_t * s = esp_camera_sensor_get();
   s->set_brightness(s, 0);     // -2 to 2
   s->set_contrast(s, 0);       // -2 to 2
@@ -141,8 +141,8 @@ void adjustWhiteBalance()
     return;
   }
 
-  cliSerial->print("WB adjust ");
-  cliSerial->println(cameraPicCount);
+  //cliSerial->print("WB adjust ");
+  //cliSerial->println(cameraPicCount);
   // Take Picture with Camera
   fb = esp_camera_fb_get();
  
@@ -176,11 +176,10 @@ bool takePhoto(fs::FS &fs)
 
   // Path where new picture will be saved in SD Card
   String path = "/" + String(PIC_FOLDER) + "/" + getNameYM() + "/" + getNameYMDHIS() + "-" + String(bootCounter) + ".jpg";
-
-  cliSerial->printf("Picture file name: %s\n", path.c_str());
   
   File file = fs.open(path.c_str(), FILE_WRITE);
   if(!file){
+    cliSerial->printf("Picture file name: %s\n", path.c_str());
     cliSerial->println("Failed to open file in writing mode");
   } else {
     file.write(fb->buf, fb->len); // payload (image), payload length

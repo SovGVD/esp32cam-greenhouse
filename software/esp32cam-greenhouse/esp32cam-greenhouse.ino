@@ -83,7 +83,7 @@ void setup() {
 }
 
 void loop() {
-  cliSerial->println("Loop start");
+  //cliSerial->println("Loop start");
   while (isWaitingAllDone) {
     currentTime = millis();
 

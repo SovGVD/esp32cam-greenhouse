@@ -18,7 +18,7 @@ void i2cScan()
 
 void initHumidity()
 {
-  cliSerial->println("Try HDC1080");
+  //cliSerial->println("Try HDC1080");
   hdc1080.begin(0x40);
   if (hdc1080.readDeviceId()) {
     appendSensor(0, SENSOR_HDC1080, 0x40, VALUE_TYPE_TEMPERATURE); // Temperature
@@ -32,11 +32,18 @@ void initHumidity()
 
 void initAir()
 {
-  cliSerial->println("Try CCS811");
+  if (bootCounter % 5) {
+    return;
+  }
+
+  // my css811 on the same board with hda1080 and looks like it is heating it so temperature and humidity return wrong data =(
+  //cliSerial->println("Try CCS811");
   if (ccs811.begin()) {
     while(!ccs811.available()) {   // TODO not great, try to move it into main loop
-      delay(5);
+      delay(10);
     }
+
+    //ccs811.setDriveMode(CCS811_DRIVE_MODE_IDLE);
     appendSensor(0, SENSOR_CCS811, 0x0, VALUE_TYPE_CO2);
     appendSensor(0, SENSOR_CCS811, 0x0, VALUE_TYPE_TVOC);
     cliSerial->println("CCS811 air quality sensor detected");
@@ -47,7 +54,7 @@ void initAir()
 
 void initSoil()
 {
-  cliSerial->println("Try ADC1115");
+  //cliSerial->println("Try ADC1115");
   if (ads1115.init()) {
     // Setup sensor
     ads1115.setVoltageRange_mV(ADS1115_RANGE_2048);
@@ -69,7 +76,7 @@ void initSoil()
 
 void appendSensor(uint8_t sensorChannel, uint8_t sensorType, uint8_t sensorAddress, uint8_t sensorValueType)
 {
-  cliSerial->println("Adding sensor...");
+  //cliSerial->println("Adding sensor...");
   if (currentRecordIndex == 255) {
     // TODO some error here, but probably we will never have more than 255 sensors per device
     return;
@@ -94,14 +101,14 @@ void appendSensor(uint8_t sensorChannel, uint8_t sensorType, uint8_t sensorAddre
       false,
       false,
       false,
+      false,
       0,
     };
 
-  cliSerial->print("Sensor added: ");
-  cliSerial->println(currentRecordIndex);
+  //cliSerial->print("Sensor added: ");
+  //cliSerial->println(currentRecordIndex);
   currentRecordIndex++;
   maxRecordsIndex = currentRecordIndex;
-  cliSerial->print("Total sensors: ");
-  cliSerial->println(maxRecordsIndex);
-
+  //cliSerial->print("Total sensors: ");
+  //cliSerial->println(maxRecordsIndex);
 }
