@@ -1,10 +1,3 @@
-
-
-/**
- * TODO:
- *  - working with path based on time is not optimal!!!!
- */
-
 #include "esp_camera.h"
 #include "Arduino.h"
 #include "FS.h"                // SD Card ESP32
@@ -60,7 +53,7 @@ unsigned long currentTime;
 unsigned long previousTime;
 
 void setup() {
-  bootCounter++;  // TODO resync time
+  bootCounter++;  // TODO resync time after some boots, AND store bootCounter in eeprom after each time sync to have point on return on cold boot
   startedAt = millis();
   WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
 
@@ -86,7 +79,6 @@ void setup() {
   #endif
 
   Wire.begin(I2C_SDA, I2C_SCL);
-  //Wire.setClock(400000);
   autodetectSensors();
 }
 
@@ -106,7 +98,7 @@ void loop() {
     }
 
     if ((isSensorsDataReady() && isTimeSynced) || isFail) {
-      askSensors(SENSORS_FORCE); // Final attempt for camera and maybe other sensors
+      askSensors(SENSORS_FORCE); // Final attempt for camera, storage usage and maybe other sensors
       logSave(SD_MMC);
       isWaitingAllDone = false;
     }

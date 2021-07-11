@@ -34,7 +34,9 @@ void initAir()
 {
   cliSerial->println("Try CCS811");
   if (ccs811.begin()) {
-    while(!ccs811.available());  // TODO not great, try to move it into main loop
+    while(!ccs811.available()) {   // TODO not great, try to move it into main loop
+      delay(5);
+    }
     appendSensor(0, SENSOR_CCS811, 0x0, VALUE_TYPE_CO2);
     appendSensor(0, SENSOR_CCS811, 0x0, VALUE_TYPE_TVOC);
     cliSerial->println("CCS811 air quality sensor detected");
@@ -65,7 +67,7 @@ void initSoil()
   }
 }
 
-void appendSensor(uint8_t sensorChannel, uint8_t sensorType, char sensorAddress, uint8_t sensorValueType)
+void appendSensor(uint8_t sensorChannel, uint8_t sensorType, uint8_t sensorAddress, uint8_t sensorValueType)
 {
   cliSerial->println("Adding sensor...");
   if (currentRecordIndex == 255) {
@@ -92,6 +94,7 @@ void appendSensor(uint8_t sensorChannel, uint8_t sensorType, char sensorAddress,
       false,
       false,
       false,
+      0,
     };
 
   cliSerial->print("Sensor added: ");

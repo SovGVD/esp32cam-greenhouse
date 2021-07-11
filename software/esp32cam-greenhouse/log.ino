@@ -12,10 +12,6 @@ void setupLog(fs::FS &fs)
 
 void logSave(fs::FS &fs)
 {
-  if(!getLocalTime(&timeinfo)){
-    // TODO failback if it does not work
-  }
-
   if (!isStorageAvailable) {
     return;
   }
@@ -35,9 +31,10 @@ void logSave(fs::FS &fs)
       continue;
     }
 
-    file.print(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+    file.print(&timeinfo, "%B %d %Y %H:%M:%S");
     file.print(",");
-
+    file.print(bootCounter, DEC);
+    file.print(",");
     file.print(sensors[idx].channel, DEC);
     file.print(",");
     file.print(sensors[idx].type, DEC);

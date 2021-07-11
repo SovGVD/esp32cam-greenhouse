@@ -32,29 +32,39 @@
 // 0x5A CCS811           Air Quality
 // 0x48 ADS1115/ADS1015  ADC (soil sensors)
 
+#define CAM_WB_ADJUST_FRAMES 4
+#define SENSOR_RETRY 5
+
 #define SENSORS_NORMAL false
 #define SENSORS_FORCE  true
 
 #define SENSOR_ESP32CAM 0
-#define SENSOR_HDC1080  1
-#define SENSOR_CCS811   2
-#define SENSOR_ADS1115  3
+#define SENSOR_SD_MMC   1
+#define SENSOR_POWER    2 // TODO
+#define SENSOR_HDC1080  3
+#define SENSOR_CCS811   4
+#define SENSOR_ADS1115  5
 
-#define VALUE_TYPE_RAW         0
-#define VALUE_TYPE_JPEG        1
-#define VALUE_TYPE_TEMPERATURE 2
-#define VALUE_TYPE_HUMIDITY    3
-#define VALUE_TYPE_CO2         4
-#define VALUE_TYPE_TVOC        5
+#define VALUE_TYPE_RAW           0
+#define VALUE_TYPE_STORAGE_USED  1
+#define VALUE_TYPE_STORAGE_TOTAL 2
+#define VALUE_TYPE_POWER_V       3  // TODO
+#define VALUE_TYPE_POWER_A       4  // TODO
+#define VALUE_TYPE_JPEG          5
+#define VALUE_TYPE_TEMPERATURE   6
+#define VALUE_TYPE_HUMIDITY      7
+#define VALUE_TYPE_CO2           8
+#define VALUE_TYPE_TVOC          9
 
 typedef struct {
   uint8_t channel;  // For TCA, 0 - without TCA
   uint8_t type;
+  uint8_t address;
   uint8_t num;
-  char address;
   uint8_t valueType;
   double value;
   bool isDataStored;
   bool isDataReady;
   bool isDataFailed;
+  uint8_t retry;
 } recordStructure;

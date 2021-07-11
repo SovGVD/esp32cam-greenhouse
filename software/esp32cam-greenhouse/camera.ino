@@ -26,7 +26,7 @@ void setupCamera(fs::FS &fs)
   cliSerial->println("Try ESP32CAM");
 
   camera_config_t config;
-  config.ledc_channel = LEDC_CHANNEL_0;
+  config.ledc_channel = LEDC_CHANNEL_5;
   config.ledc_timer = LEDC_TIMER_0;
   config.pin_d0 = Y2_GPIO_NUM;
   config.pin_d1 = Y3_GPIO_NUM;
@@ -115,30 +115,51 @@ void cameraSaveFolder(fs::FS &fs)
   if (!fs.exists(path)) {
     fs.mkdir(path);
   }
-  
 }
 
 void askSensor_ESP32CAM(uint8_t idx, bool forceAction)
 {
-  if ((cameraPicCount > 3 && isTimeSynced) || (forceAction && !sensors[idx].isDataReady)) {
+  if ((cameraPicCount > CAM_WB_ADJUST_FRAMES && isTimeSynced) || (forceAction && !sensors[idx].isDataReady)) {
     if (takePhoto(SD_MMC)) {
       sensors[idx].value = 1;
       sensors[idx].isDataReady = true;
+      sensors[idx].isDataFailed = false;
     } else {
-      sensors[idx].value = 0;
-      sensors[idx].isDataReady = true;
-      sensors[idx].isDataFailed = true;
+      askSensor_markAsFailed(idx);
     }
 
     return;
   }
 
+  adjustWhiteBalance();
   cameraPicCount++;
 }
 
+void adjustWhiteBalance()
+{
+  if (cameraPicCount > CAM_WB_ADJUST_FRAMES) {
+    return;
+  }
+
+  cliSerial->print("WB adjust ");
+  cliSerial->println(cameraPicCount);
+  // Take Picture with Camera
+  fb = esp_camera_fb_get();
+ 
+  if(!fb) {
+    cliSerial->println("WB: Camera capture failed");
+    return;
+  }
+
+  delay(1);
+
+  esp_camera_fb_return(fb);
+}
 
 bool takePhoto(fs::FS &fs)
 {
+  bool isSuccess = false;
+
   if (!isStorageAvailable) {
     return false;
   }
@@ -164,10 +185,11 @@ bool takePhoto(fs::FS &fs)
   } else {
     file.write(fb->buf, fb->len); // payload (image), payload length
     cliSerial->printf("Saved file to path: %s\n", path.c_str());
+    isSuccess = true;
   }
   file.close();
   
   esp_camera_fb_return(fb);
-  return !!file;
+  return isSuccess;
 }
 #endif
