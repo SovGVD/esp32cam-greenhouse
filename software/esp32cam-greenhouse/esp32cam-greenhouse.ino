@@ -28,6 +28,10 @@ ClosedCube_HDC1080 hdc1080;
   camera_fb_t * fb = NULL;  
 #endif
 
+// This can't be implemented at the moment, see https://github.com/wollewald/INA219_WE/issues/6
+//#include<INA219_WE.h>
+//INA219_WE ina219;
+
 struct tm timeinfo;
 bool isStorageAvailable = false;
 
@@ -97,7 +101,7 @@ void loop() {
       isFail = true;
     }
 
-    if ((isSensorsDataReady() && isTimeSynced) || isFail) {
+    if ((isAllSensorsDataReady() && isTimeSynced) || isFail) {
       askSensors(SENSORS_FORCE); // Final attempt for camera, storage usage and maybe other sensors
       logSave(SD_MMC);
       isWaitingAllDone = false;

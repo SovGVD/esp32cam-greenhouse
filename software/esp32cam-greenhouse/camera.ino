@@ -1,6 +1,3 @@
-// TODO make is as one of the sensor???
-
-
 /*********
  * Camera code inspired by and copy-pasted from:
 
@@ -19,12 +16,9 @@
 *********/
 
 #ifdef CAMERA_ENABLED
-uint8_t cameraPicCount = 0;
 
 void setupCamera(fs::FS &fs)
 {
-  //cliSerial->println("Try ESP32CAM");
-
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_5;
   config.ledc_timer = LEDC_TIMER_0;
@@ -57,8 +51,6 @@ void setupCamera(fs::FS &fs)
     config.fb_count = 1;
   }
 
-  //cliSerial->println("ESP32CAM initialisation...");
-  
   // Init Camera
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
@@ -66,7 +58,6 @@ void setupCamera(fs::FS &fs)
     return;
   }
 
-  //cliSerial->println("ESP32CAM cam settings...");
   sensor_t * s = esp_camera_sensor_get();
   s->set_brightness(s, 0);     // -2 to 2
   s->set_contrast(s, 0);       // -2 to 2
@@ -119,31 +110,25 @@ void cameraSaveFolder(fs::FS &fs)
 
 void askSensor_ESP32CAM(uint8_t idx, bool forceAction)
 {
-  if ((cameraPicCount > CAM_WB_ADJUST_FRAMES && isTimeSynced) || (forceAction && !sensors[idx].isDataReady)) {
-    if (takePhoto(SD_MMC)) {
-      sensors[idx].value = 1;
-      sensors[idx].isDataReady = true;
-      sensors[idx].isDataFailed = false;
-    } else {
-      askSensor_markAsFailed(idx);
-    }
-
+  if (isSensorDataReady(idx)) {
     return;
   }
 
-  adjustWhiteBalance();
-  cameraPicCount++;
+  if (isSensorSkip(idx)) {
+    adjustWhiteBalance();
+  } else {
+    if (isTimeSynced || forceAction) {
+      if (takePhoto(SD_MMC)) {
+        setSensorValue(idx, 1);
+      } else {
+        askSensor_markAsFailed(idx);
+      }
+    }
+  }
 }
 
 void adjustWhiteBalance()
 {
-  if (cameraPicCount > CAM_WB_ADJUST_FRAMES) {
-    return;
-  }
-
-  //cliSerial->print("WB adjust ");
-  //cliSerial->println(cameraPicCount);
-  // Take Picture with Camera
   fb = esp_camera_fb_get();
  
   if(!fb) {

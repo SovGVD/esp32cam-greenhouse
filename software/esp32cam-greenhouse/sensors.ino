@@ -5,6 +5,7 @@ uint16_t sensorValueUInt16 = 0;
 void autodetectSensors()
 {
   i2cScan();
+  initPower();
   initHumidity();
   initAir();
   initSoil();
@@ -14,50 +15,54 @@ void askSensors(bool forceAction)
 {
   for (uint8_t idx = 0; idx < maxRecordsIndex; idx++) {
     // skip sensors with ready data
-    if (sensors[idx].isDataReady) {
+    if (skipSensorOnAskSensors(idx)) {
       continue;
     }
 
-    switch(sensors[idx].type) {
+    switch(sensors[idx].device.type) {
       #ifdef CAMERA_ENABLED
         case SENSOR_ESP32CAM:
-          //cliSerial->println("SENSOR_ESP32CAM");
           askSensor_ESP32CAM(idx, forceAction);
           break;
       #endif
 
       case SENSOR_SD_MMC:
-        //cliSerial->println("SENSOR_SD_MMC");
         askSensor_SD_MMC(idx, forceAction);
         break;
 
+      case SENSOR_INA219:
+        askSensor_INA219(idx, forceAction);
+        break;
+
       case SENSOR_HDC1080:
-        //cliSerial->println("SENSOR_HDC1080");
         askSensor_HDC1080(idx, forceAction);
         break;
 
       case SENSOR_CCS811:
-        //cliSerial->println("SENSOR_CCS811");
         askSensor_CCS811(idx, forceAction);
         break;
 
       case SENSOR_ADS1115:
-        //cliSerial->println("SENSOR_ADS1115");
         askSensor_ADS1115(idx, forceAction);
         break;
     }
   }
 }
 
+void askSensor_INA219(uint8_t idx, bool forceAction)
+{
+  // TODO
+}
+
 void askSensor_HDC1080(uint8_t idx, bool forceAction)
 {
-  if (sensors[idx].address != 0x0) {
-    hdc1080.begin(sensors[idx].address);
+  if (sensors[idx].device.address != 0x0) {
+    hdc1080.begin(sensors[idx].device.address);
   }
 
-  switch(sensors[idx].valueType) {
+  switch(sensors[idx].value.valueType) {
     case VALUE_TYPE_HUMIDITY:
-      if (sensors[idx].retry > SENSOR_RETRY) {
+      if (isSensorRetryFailed(idx)) {
         askSensor_HDC1080_error_noData(idx);
         return;
       }
@@ -67,10 +72,9 @@ void askSensor_HDC1080(uint8_t idx, bool forceAction)
       if (sensorValueDouble < 99.9) {
         cliSerial->print("Humidity: ");
         cliSerial->println(sensorValueDouble);
-        sensors[idx].value = sensorValueDouble;
-        sensors[idx].isDataReady = true;
+        setSensorValue(idx, sensorValueDouble);
       } else {
-        sensors[idx].retry++;
+        sensorRetry(idx);
       }
       break;
 
@@ -78,8 +82,7 @@ void askSensor_HDC1080(uint8_t idx, bool forceAction)
       sensorValueDouble = hdc1080.readTemperature();
       cliSerial->print("Temperature: ");
       cliSerial->println(sensorValueDouble);
-      sensors[idx].value = sensorValueDouble;
-      sensors[idx].isDataReady = true;
+      setSensorValue(idx, sensorValueDouble);
       break;
 
     default:
@@ -91,7 +94,7 @@ void askSensor_HDC1080(uint8_t idx, bool forceAction)
 
 void askSensor_CCS811(uint8_t idx, bool forceAction)
 {
-
+  // CCS811 a little bit complicated
   float temperatureCCS811 = getDataForCCS811(idx, VALUE_TYPE_TEMPERATURE);
   float humidityCCS811    = getDataForCCS811(idx, VALUE_TYPE_HUMIDITY);
 
@@ -102,16 +105,16 @@ void askSensor_CCS811(uint8_t idx, bool forceAction)
   // TODO what if another address?
 
   if(ccs811.available()) {
-    if (!sensors[idx].isPrepareMode) {
+    if (!sensors[idx].status.isPrepareMode) {
       ccs811.setEnvironmentalData(humidityCCS811, temperatureCCS811);
-      //ccs811.setDriveMode(CCS811_DRIVE_MODE_1SEC);
-      sensors[idx].isPrepareMode = true;
+      sensors[idx].status.isPrepareMode = true;
       delay(1100);
     }
+
     if(!ccs811.readData()) {
-      switch(sensors[idx].valueType) {
+      switch(sensors[idx].value.valueType) {
         case VALUE_TYPE_CO2:
-          if (sensors[idx].retry > SENSOR_RETRY) {
+          if (isSensorRetryFailed(idx)) {
             askSensor_CCS811_error_noData(idx);
             return;
           }
@@ -120,15 +123,15 @@ void askSensor_CCS811(uint8_t idx, bool forceAction)
           if (sensorValueUInt16 != 400 && sensorValueUInt16 != 0) {
             cliSerial->print("eCO2: ");
             cliSerial->println(sensorValueUInt16);
-            sensors[idx].value = sensorValueUInt16;
-            sensors[idx].isDataReady = true;
+            setSensorValue(idx, sensorValueUInt16);
           } else {
-            sensors[idx].retry++;
+            sensorRetry(idx);
           }
 
           break;
+
         case VALUE_TYPE_TVOC:
-          if (sensors[idx].retry > SENSOR_RETRY) {
+          if (isSensorRetryFailed(idx)) {
             askSensor_CCS811_error_noData(idx);
             return;
           }
@@ -137,17 +140,19 @@ void askSensor_CCS811(uint8_t idx, bool forceAction)
           if (sensorValueUInt16 > 0) { 
             cliSerial->print("TVOC: ");
             cliSerial->println(sensorValueUInt16);
-            sensors[idx].value = sensorValueUInt16;
-            sensors[idx].isDataReady = true;
-            ccs811.setDriveMode(CCS811_DRIVE_MODE_IDLE);
-            sensors[idx].isPrepareMode = false;
+            setSensorValue(idx, sensorValueUInt16);
+            if (isSensorDataReady(idx)) {
+              ccs811.setDriveMode(CCS811_DRIVE_MODE_IDLE);
+              sensors[idx].status.isPrepareMode = false;
+            }
           } else {
-            sensors[idx].retry++;
+            sensorRetry(idx);
           }
           break;
+
         default:
           ccs811.setDriveMode(CCS811_DRIVE_MODE_IDLE);
-          sensors[idx].isPrepareMode = false;
+          sensors[idx].status.isPrepareMode = false;
           askSensor_CCS811_error_noData(idx);
           return;
           break;
@@ -162,7 +167,7 @@ void askSensor_ADS1115(uint8_t idx, bool forceAction)
 
   ADS1115_MUX channel = ADS1115_COMP_0_GND;
   
-  switch(sensors[idx].num) {
+  switch(sensors[idx].device.num) {
     case 0:
       channel = ADS1115_COMP_0_GND;
       break;
@@ -185,20 +190,9 @@ void askSensor_ADS1115(uint8_t idx, bool forceAction)
   delay(10);
   sensorValueFloat = ads1115.getResult_mV();
   cliSerial->print("Analog ");
-  cliSerial->print(sensors[idx].num);
+  cliSerial->print(sensors[idx].device.num);
   cliSerial->print(": ");
   cliSerial->println(sensorValueFloat);
 
-  sensors[idx].value = sensorValueFloat;
-  sensors[idx].isDataReady = true;
-}
-
-bool isSensorsDataReady() {
-  for (uint8_t idx = 0; idx < maxRecordsIndex; idx++) {
-    if (!sensors[idx].isDataReady) {
-      return false;
-    }
-  }
-
-  return true;
+  setSensorValue(idx, sensorValueFloat);
 }

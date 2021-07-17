@@ -27,22 +27,55 @@
 #define LOG_FOLDER "logs"
 #define PIC_FOLDER "pics"
 
+typedef struct {
+  uint8_t channel;    // For TCA, 0 - without TCA
+  uint8_t type;       // sensor type, e.g. SENSOR_SD_MMC or SENSOR_ADS1115
+  uint8_t address;    // non-default i2c sensor address
+  uint8_t num;        // number of sensor, e.g. HDC1080 returning two values: temperature and humidity, in that case it will be shown as 2 sensors: num=0 and num=1
+} deviceStructure;
+
+typedef struct {
+  double value;
+  uint8_t valueType;
+} valueStructure;
+
+typedef struct {
+  bool isDataStored;  // data save on SD card via `log`
+  bool isDataReady;   // data ready to be saved
+  bool isDataFailed;  // failed to fetch data
+  bool isPrepareMode; // sensor in prepare mode (e.g. SENSOR_CCS811 required some heatup)
+} statusStructure;
+
+typedef struct {
+  uint8_t retry;      // number or retrying if sensor is not available
+  uint8_t skip;       // skip readings before start saving it (e.g. SENSOR_ESP32CAM required at least 3 frames to set Auto White Balance)
+  uint8_t average;    // number or readings before average value, 0 - continously reading, 1 - one reading only
+  bool storeMax;      // for average = 0, true -> save maximal value, false -> save minimal value
+} settingsStructure;
+
+typedef struct {
+  deviceStructure device;
+  valueStructure value;
+  statusStructure status;
+  settingsStructure settings;
+  settingsStructure settingsState;
+} recordStructure;
+
 // Sensors:
 // 0x40 HDC1080          Humidity/Temperature
 // 0x5A CCS811           Air Quality
 // 0x48 ADS1115/ADS1015  ADC (soil sensors)
-
-#define CAM_WB_ADJUST_FRAMES 4
-#define SENSOR_RETRY 5
 
 #define SENSOR_ERROR_VALUE -99999.9
 
 #define SENSORS_NORMAL false
 #define SENSORS_FORCE  true
 
+#define SENSORS_NUM     6
+
 #define SENSOR_ESP32CAM 0
 #define SENSOR_SD_MMC   1
-#define SENSOR_POWER    2 // TODO
+#define SENSOR_INA219   2 // TODO
 #define SENSOR_HDC1080  3
 #define SENSOR_CCS811   4
 #define SENSOR_ADS1115  5
@@ -58,16 +91,12 @@
 #define VALUE_TYPE_CO2           8
 #define VALUE_TYPE_TVOC          9
 
-typedef struct {
-  uint8_t channel;  // For TCA, 0 - without TCA
-  uint8_t type;
-  uint8_t address;
-  uint8_t num;
-  uint8_t valueType;
-  double value;
-  bool isDataStored;
-  bool isDataReady;
-  bool isDataFailed;
-  bool isPrepareMode;
-  uint8_t retry;
-} recordStructure;
+// {skip, retry, average}
+settingsStructure defaultSettings[SENSORS_NUM] = {
+  {4, 0, 1},  // SENSOR_ESP32CAM
+  {0, 0, 0},  // SENSOR_SD_MMC
+  {0, 0, 0},  // SENSOR_POWER
+  {0, 5, 3},  // SENSOR_HDC1080
+  {0, 5, 3},  // SENSOR_CCS811
+  {0, 2, 3}   // SENSOR_ADS1115
+};

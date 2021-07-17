@@ -27,7 +27,7 @@ void logSave(fs::FS &fs)
   }
 
   for (uint8_t idx = 0; idx < maxRecordsIndex; idx++) {
-    if (sensors[idx].isDataStored) {
+    if (sensors[idx].status.isDataStored) {
       continue;
     }
 
@@ -35,22 +35,22 @@ void logSave(fs::FS &fs)
     file.print(",");
     file.print(bootCounter, DEC);
     file.print(",");
-    file.print(sensors[idx].channel, DEC);
+    file.print(sensors[idx].device.channel, DEC);
     file.print(",");
-    file.print(sensors[idx].type, DEC);
+    file.print(sensors[idx].device.type, DEC);
     file.print(",");
-    file.print(sensors[idx].num, DEC);
+    file.print(sensors[idx].device.num, DEC);
     file.print(",");
-    file.print(sensors[idx].address, DEC);
+    file.print(sensors[idx].device.address, DEC);
     file.print(",");
-    file.print(sensors[idx].isDataFailed ? "FAIL" : "OK");
+    file.print(sensors[idx].status.isDataFailed ? "FAIL" : "OK");
     file.print(",");
-    file.print(sensors[idx].value);
+    file.print(sensors[idx].value.value);
     file.print(",");
-    file.print(sensors[idx].valueType, DEC);
+    file.print(sensors[idx].value.valueType, DEC);
     file.println();
 
-    sensors[idx].isDataStored = true;
+    sensors[idx].status.isDataStored = true;
   }
 
   file.close();

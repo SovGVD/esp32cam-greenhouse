@@ -15,14 +15,23 @@ void i2cScan()
   cliSerial->println("Done!");
 }
 
+void initPower()
+{
+//  if (ina219.init()) {
+//    appendSensor(0, SENSOR_INA219, 0x0, VALUE_TYPE_POWER_V);
+//    appendSensor(0, SENSOR_INA219, 0x0, VALUE_TYPE_POWER_A);
+//    cliSerial->println("INA219 power sensor detected");
+//  } else {
+//    cliSerial->println("INA219 - sensor is not available");
+//  }
+}
 
 void initHumidity()
 {
-  //cliSerial->println("Try HDC1080");
   hdc1080.begin(0x40);
   if (hdc1080.readDeviceId()) {
-    appendSensor(0, SENSOR_HDC1080, 0x40, VALUE_TYPE_TEMPERATURE); // Temperature
-    appendSensor(0, SENSOR_HDC1080,  0x0, VALUE_TYPE_HUMIDITY);    // Humidity, set address to 0x0 to use previusly requested sensor as it is just one sensor
+    appendSensor(0, SENSOR_HDC1080, 0x0, VALUE_TYPE_TEMPERATURE); // Temperature
+    appendSensor(0, SENSOR_HDC1080, 0x0, VALUE_TYPE_HUMIDITY);    // Humidity, set address to 0x0 to use previusly requested sensor as it is just one sensor
     cliSerial->println("HDC1080 Humidity and Temperature sensor detected");
   } else {
     cliSerial->println("HDC1080 - sensor is not available");
@@ -37,13 +46,11 @@ void initAir()
   }
 
   // my css811 on the same board with hda1080 and looks like it is heating it so temperature and humidity return wrong data =(
-  //cliSerial->println("Try CCS811");
   if (ccs811.begin()) {
     while(!ccs811.available()) {   // TODO not great, try to move it into main loop
       delay(10);
     }
 
-    //ccs811.setDriveMode(CCS811_DRIVE_MODE_IDLE);
     appendSensor(0, SENSOR_CCS811, 0x0, VALUE_TYPE_CO2);
     appendSensor(0, SENSOR_CCS811, 0x0, VALUE_TYPE_TVOC);
     cliSerial->println("CCS811 air quality sensor detected");
@@ -76,7 +83,6 @@ void initSoil()
 
 void appendSensor(uint8_t sensorChannel, uint8_t sensorType, uint8_t sensorAddress, uint8_t sensorValueType)
 {
-  //cliSerial->println("Adding sensor...");
   if (currentRecordIndex == 255) {
     // TODO some error here, but probably we will never have more than 255 sensors per device
     return;
@@ -86,29 +92,32 @@ void appendSensor(uint8_t sensorChannel, uint8_t sensorType, uint8_t sensorAddre
   for (uint8_t idx = 0; idx < maxRecordsIndex; idx++)
   {
     // increment sensor number
-    if (sensors[idx].channel == sensorChannel && sensors[idx].type == sensorType && sensors[idx].address == sensorAddress) {
-      sensorNum = sensors[idx].num + 1;
+    if (sensors[idx].device.channel == sensorChannel && sensors[idx].device.type == sensorType && sensors[idx].device.address == sensorAddress) {
+      sensorNum = sensors[idx].device.num + 1;
     }
   }
 
   sensors[currentRecordIndex] = {
-      sensorChannel,
-      sensorType,
-      sensorAddress,
-      sensorNum,
-      sensorValueType,
-      0.0,
-      false,
-      false,
-      false,
-      false,
-      0,
+      {
+        sensorChannel,
+        sensorType,
+        sensorAddress,
+        sensorNum
+      },
+      {
+        sensorValueType,
+        0.0
+      },
+      {
+        false,
+        false,
+        false,
+        false
+      },
+      defaultSettings[sensorType],                    // Settings
+      {0, 0, 0, defaultSettings[sensorType].storeMax} // Settings state
     };
 
-  //cliSerial->print("Sensor added: ");
-  //cliSerial->println(currentRecordIndex);
   currentRecordIndex++;
   maxRecordsIndex = currentRecordIndex;
-  //cliSerial->print("Total sensors: ");
-  //cliSerial->println(maxRecordsIndex);
 }
