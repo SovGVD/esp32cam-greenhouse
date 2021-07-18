@@ -49,7 +49,7 @@ typedef struct {
 typedef struct {
   uint8_t retry;      // number or retrying if sensor is not available
   uint8_t skip;       // skip readings before start saving it (e.g. SENSOR_ESP32CAM required at least 3 frames to set Auto White Balance)
-  uint8_t average;    // number or readings before average value, 0 - continously reading, 1 - one reading only
+  uint8_t average;    // number or readings before average value, 0 - continuous reading, 1 - one reading only
   bool storeMax;      // for average = 0, true -> save maximal value, false -> save minimal value
 } settingsStructure;
 
@@ -77,7 +77,7 @@ typedef struct {
 
 #define SENSOR_ESP32CAM 0
 #define SENSOR_SD_MMC   1
-#define SENSOR_INA219   2 // TODO
+#define SENSOR_INA219   2
 #define SENSOR_HDC1080  3
 #define SENSOR_CCS811   4
 #define SENSOR_ADS1115  5
@@ -85,20 +85,20 @@ typedef struct {
 #define VALUE_TYPE_RAW           0
 #define VALUE_TYPE_STORAGE_USED  1
 #define VALUE_TYPE_STORAGE_TOTAL 2
-#define VALUE_TYPE_POWER_V       3  // TODO
-#define VALUE_TYPE_POWER_A       4  // TODO
+#define VALUE_TYPE_POWER_V       3
+#define VALUE_TYPE_POWER_A       4
 #define VALUE_TYPE_JPEG          5
 #define VALUE_TYPE_TEMPERATURE   6
 #define VALUE_TYPE_HUMIDITY      7
-#define VALUE_TYPE_CO2           8
+#define VALUE_TYPE_ECO2          8
 #define VALUE_TYPE_TVOC          9
 
-// {skip, retry, average}
+// {retry, skip, average, storeMax}
 settingsStructure defaultSettings[SENSORS_NUM] = {
-  {4, 0, 1, true},  // SENSOR_ESP32CAM
+  {0, 5, 1, true},  // SENSOR_ESP32CAM
   {0, 0, 0, true},  // SENSOR_SD_MMC
   {0, 0, 0, true},  // SENSOR_POWER
-  {0, 5, 3, true},  // SENSOR_HDC1080
-  {0, 5, 3, true},  // SENSOR_CCS811
-  {0, 2, 3, true}   // SENSOR_ADS1115
+  {5, 0, 2, true},  // SENSOR_HDC1080
+  {5, 0, 2, true},  // SENSOR_CCS811
+  {2, 0, 3, true}   // SENSOR_ADS1115
 };

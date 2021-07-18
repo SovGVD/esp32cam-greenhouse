@@ -27,6 +27,8 @@ void logSave(fs::FS &fs)
   }
 
   for (uint8_t idx = 0; idx < maxRecordsIndex; idx++) {
+    cliSerial->print("SAVE: ");
+    printSensor(idx);
     if (sensors[idx].status.isDataStored) {
       continue;
     }

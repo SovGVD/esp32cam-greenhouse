@@ -104,6 +104,7 @@ void loop() {
     if ((isAllSensorsDataReady() && isTimeSynced) || isFail) {
       askSensors(SENSORS_FORCE); // Final attempt for camera, storage usage and maybe other sensors
       logSave(SD_MMC);
+      disableSensors();
       isWaitingAllDone = false;
     }
   }

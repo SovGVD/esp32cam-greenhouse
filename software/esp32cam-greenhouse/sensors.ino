@@ -14,16 +14,11 @@ void autodetectSensors()
 void askSensors(bool forceAction)
 {
   for (uint8_t idx = 0; idx < maxRecordsIndex; idx++) {
+
     // skip sensors with ready data
     if (skipSensorOnAskSensors(idx)) {
       continue;
     }
-
-//    cliSerial->print(idx);
-//    cliSerial->print(isSensorSkip(idx) ? " skip " : "  do  ");
-//    cliSerial->print(isSensorDataReady(idx) ? " DA " : " -- ");
-//    cliSerial->print(sensors[idx].settings.retry > 0 ? (isSensorRetryFailed(idx) ? " RF ": " RP ") : " RN "); // Retry: Fail, Progress, No (no retry)
-//    cliSerial->println(" sensor ask");
 
     switch(sensors[idx].device.type) {
       #ifdef CAMERA_ENABLED
@@ -94,8 +89,6 @@ void askSensor_HDC1080(uint8_t idx, bool forceAction)
       sensorValueDouble = hdc1080.readHumidity();
 
       if (sensorValueDouble < 99.9) {
-        cliSerial->print("Humidity: ");
-        cliSerial->println(sensorValueDouble);
         setSensorValue(idx, sensorValueDouble);
       } else {
         sensorRetry(idx);
@@ -104,9 +97,11 @@ void askSensor_HDC1080(uint8_t idx, bool forceAction)
 
     case VALUE_TYPE_TEMPERATURE:
       sensorValueDouble = hdc1080.readTemperature();
-      cliSerial->print("Temperature: ");
-      cliSerial->println(sensorValueDouble);
-      setSensorValue(idx, sensorValueDouble);
+      if (sensorValueDouble != 125.0) {
+        setSensorValue(idx, sensorValueDouble);
+      } else {
+        sensorRetry(idx);
+      }
       break;
 
     default:
@@ -117,11 +112,17 @@ void askSensor_HDC1080(uint8_t idx, bool forceAction)
 
 void askSensor_CCS811(uint8_t idx, bool forceAction)
 {
-  // CCS811 a little bit complicated
+  // CCS811 a little bit complicated and I don't think it is working correct
   float temperatureCCS811 = getDataForCCS811(idx, VALUE_TYPE_TEMPERATURE);
   float humidityCCS811    = getDataForCCS811(idx, VALUE_TYPE_HUMIDITY);
 
   if (temperatureCCS811 == SENSOR_ERROR_VALUE || humidityCCS811 == SENSOR_ERROR_VALUE) {
+    return;
+  }
+
+  if (isDeviceDataReady(idx)) {
+    ccs811.setDriveMode(CCS811_DRIVE_MODE_IDLE);
+    sensors[idx].status.isPrepareMode = false;
     return;
   }
 
@@ -131,12 +132,14 @@ void askSensor_CCS811(uint8_t idx, bool forceAction)
     if (!sensors[idx].status.isPrepareMode) {
       ccs811.setEnvironmentalData(humidityCCS811, temperatureCCS811);
       sensors[idx].status.isPrepareMode = true;
-      delay(1100);
+      ccs811.setDriveMode(CCS811_DRIVE_MODE_1SEC);
+      delay(1000);
     }
 
+    delay(200);
     if(!ccs811.readData()) {
       switch(sensors[idx].value.valueType) {
-        case VALUE_TYPE_CO2:
+        case VALUE_TYPE_ECO2:
           if (isSensorRetryFailed(idx)) {
             askSensor_CCS811_error_noData(idx);
             return;
@@ -144,8 +147,6 @@ void askSensor_CCS811(uint8_t idx, bool forceAction)
 
           sensorValueUInt16 = ccs811.geteCO2();
           if (sensorValueUInt16 != 400 && sensorValueUInt16 != 0) {
-            cliSerial->print("eCO2: ");
-            cliSerial->println(sensorValueUInt16);
             setSensorValue(idx, sensorValueUInt16);
           } else {
             sensorRetry(idx);
@@ -161,13 +162,7 @@ void askSensor_CCS811(uint8_t idx, bool forceAction)
 
           sensorValueUInt16 = ccs811.getTVOC();
           if (sensorValueUInt16 > 0) { 
-            cliSerial->print("TVOC: ");
-            cliSerial->println(sensorValueUInt16);
             setSensorValue(idx, sensorValueUInt16);
-            if (isSensorDataReady(idx)) {
-              ccs811.setDriveMode(CCS811_DRIVE_MODE_IDLE);
-              sensors[idx].status.isPrepareMode = false;
-            }
           } else {
             sensorRetry(idx);
           }
@@ -212,10 +207,6 @@ void askSensor_ADS1115(uint8_t idx, bool forceAction)
   ads1115.setCompareChannels(channel);
   delay(10);
   sensorValueFloat = ads1115.getResult_mV();
-  cliSerial->print("Analog ");
-  cliSerial->print(sensors[idx].device.num);
-  cliSerial->print(": ");
-  cliSerial->println(sensorValueFloat);
 
   setSensorValue(idx, sensorValueFloat);
 }

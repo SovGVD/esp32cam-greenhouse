@@ -15,16 +15,13 @@ void setupStorage()
   isStorageAvailable = true;
 
   appendSensor(0, SENSOR_SD_MMC, 0x0, VALUE_TYPE_STORAGE_USED);
-  cliSerial->print("SD_MMC ");
-  cliSerial->println(currentRecordIndex-1);
   appendSensor(0, SENSOR_SD_MMC, 0x0, VALUE_TYPE_STORAGE_TOTAL);
-  cliSerial->print("SD_MMC ");
-  cliSerial->println(currentRecordIndex-1);
 }
 
 void askSensor_SD_MMC(uint8_t idx, bool forceAction)
 {
   if (!isStorageAvailable) {
+    cliSerial->println("SD_MMC - storage is not available.");
     askSensor_SD_MMC_noData(idx);
     return;
   }
@@ -32,23 +29,24 @@ void askSensor_SD_MMC(uint8_t idx, bool forceAction)
   // This will return size BEFORE image save, so does not look correct
   switch(sensors[idx].value.valueType) {
     case VALUE_TYPE_STORAGE_USED:
-      cliSerial->print("SD_MMC used: ");
-      cliSerial->println(SD_MMC.usedBytes());
       setSensorValue(idx, SD_MMC.usedBytes() / (1024 * 1024));
       break;
 
     case VALUE_TYPE_STORAGE_TOTAL:
-      cliSerial->print("SD_MMC total: ");
-      cliSerial->println(SD_MMC.totalBytes());
-      cliSerial->print("SD_MMC size: ");
-      cliSerial->println(SD_MMC.cardSize());
       setSensorValue(idx, SD_MMC.totalBytes() / (1024 * 1024));
       break;
 
     default:
+      cliSerial->print("SD_MMC unknown type: ");
+      cliSerial->println(sensors[idx].value.valueType);
       askSensor_SD_MMC_noData(idx);
-      break;
+      return;
   }
+}
+
+void disableSensor_SD_MMC(uint8_t idx)
+{
+  SD_MMC.end();
 }
 
 void askSensor_SD_MMC_noData(uint8_t idx)

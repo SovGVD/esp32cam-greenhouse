@@ -1,6 +1,6 @@
 void i2cScan()
 {
-  cliSerial->println("i2c scan");
+  cliSerial->print("I2C SCAN: [");
   for (byte i = 8; i < 120; i++)
   {
     Wire.beginTransmission (i);        // Begin I2C transmission Address (i)
@@ -12,7 +12,7 @@ void i2cScan()
       cliSerial->print("), ");
     }
   }
-  cliSerial->println("Done!");
+  cliSerial->println("]");
 }
 
 void initPower()
@@ -24,11 +24,7 @@ void initPower()
     ina219.setBusRange(BRNG_16);
 
     appendSensor(0, SENSOR_INA219, 0x0, VALUE_TYPE_POWER_V);
-    cliSerial->print("INA219 ");
-    cliSerial->println(currentRecordIndex-1);
     appendSensor(0, SENSOR_INA219, 0x0, VALUE_TYPE_POWER_A);
-    cliSerial->print("INA219 ");
-    cliSerial->println(currentRecordIndex-1);
     cliSerial->println("INA219 power sensor detected");
   } else {
     cliSerial->println("INA219 - sensor is not available");
@@ -40,11 +36,7 @@ void initHumidity()
   hdc1080.begin(0x40);
   if (hdc1080.readDeviceId()) {
     appendSensor(0, SENSOR_HDC1080, 0x0, VALUE_TYPE_TEMPERATURE); // Temperature
-    cliSerial->print("HDC1080 ");
-    cliSerial->println(currentRecordIndex-1);
     appendSensor(0, SENSOR_HDC1080, 0x0, VALUE_TYPE_HUMIDITY);    // Humidity, set address to 0x0 to use previusly requested sensor as it is just one sensor
-    cliSerial->print("HDC1080 ");
-    cliSerial->println(currentRecordIndex-1);
     cliSerial->println("HDC1080 Humidity and Temperature sensor detected");
   } else {
     cliSerial->println("HDC1080 - sensor is not available");
@@ -63,13 +55,10 @@ void initAir()
     while(!ccs811.available()) {   // TODO not great, try to move it into main loop
       delay(10);
     }
+    ccs811.setDriveMode(CCS811_DRIVE_MODE_IDLE);
 
-    appendSensor(0, SENSOR_CCS811, 0x0, VALUE_TYPE_CO2);
-    cliSerial->print("CCS811 ");
-    cliSerial->println(currentRecordIndex-1);
+    appendSensor(0, SENSOR_CCS811, 0x0, VALUE_TYPE_ECO2);
     appendSensor(0, SENSOR_CCS811, 0x0, VALUE_TYPE_TVOC);
-    cliSerial->print("CCS811 ");
-    cliSerial->println(currentRecordIndex-1);
     cliSerial->println("CCS811 air quality sensor detected");
   } else {
     cliSerial->println("CCS811 - sensor is not available");
@@ -85,21 +74,13 @@ void initSoil()
     ads1115.setCompareChannels(ADS1115_COMP_0_GND);
     ads1115.setAlertPinMode(ADS1115_DISABLE_ALERT);
     ads1115.setConvRate(ADS1115_128_SPS);
-    ads1115.setMeasureMode(ADS1115_SINGLE);
+    ads1115.setMeasureMode(ADS1115_CONTINUOUS);
 
     // 4 channels
     appendSensor(0, SENSOR_ADS1115, 0x0, VALUE_TYPE_RAW);
-    cliSerial->print("ADC1115 ");
-    cliSerial->println(currentRecordIndex-1);
     appendSensor(0, SENSOR_ADS1115, 0x0, VALUE_TYPE_RAW);
-    cliSerial->print("ADC1115 ");
-    cliSerial->println(currentRecordIndex-1);
     appendSensor(0, SENSOR_ADS1115, 0x0, VALUE_TYPE_RAW);
-    cliSerial->print("ADC1115 ");
-    cliSerial->println(currentRecordIndex-1);
     appendSensor(0, SENSOR_ADS1115, 0x0, VALUE_TYPE_RAW);
-    cliSerial->print("ADC1115 ");
-    cliSerial->println(currentRecordIndex-1);
     cliSerial->println("ADC1115 based soil moisture sensor detected");
   } else {
     cliSerial->println("ADC1115 - sensor is not available");
@@ -130,8 +111,8 @@ void appendSensor(uint8_t sensorChannel, uint8_t sensorType, uint8_t sensorAddre
         sensorNum
       },
       {
+        0.0,
         sensorValueType,
-        0.0
       },
       {
         false,
@@ -142,6 +123,9 @@ void appendSensor(uint8_t sensorChannel, uint8_t sensorType, uint8_t sensorAddre
       defaultSettings[sensorType],                    // Settings
       {0, 0, 0, defaultSettings[sensorType].storeMax} // Settings state
     };
+
+  cliSerial->print("INIT: ");
+  printSensor(currentRecordIndex);
 
   currentRecordIndex++;
   maxRecordsIndex = currentRecordIndex;

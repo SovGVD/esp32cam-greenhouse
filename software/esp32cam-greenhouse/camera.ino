@@ -54,7 +54,7 @@ void setupCamera(fs::FS &fs)
   // Init Camera
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
-    cliSerial->printf("Camera init failed with error 0x%x", err);
+    cliSerial->printf("ESP32CAM: Camera init failed with error 0x%x", err);
     return;
   }
 
@@ -85,17 +85,13 @@ void setupCamera(fs::FS &fs)
 
   // setup folder
   if (isStorageAvailable) {
-    cliSerial->println("ESP32CAM check or create folder");
     String path = "/" + String(PIC_FOLDER);
     if (!fs.exists(path)) {
       fs.mkdir(path);
     }
   }
 
-  cliSerial->println("ESP32CAM init finished");
   appendSensor(0, SENSOR_ESP32CAM, 0x0, VALUE_TYPE_JPEG);
-  cliSerial->print("ESP32CAM ");
-  cliSerial->println(currentRecordIndex-1);
 }
 
 void cameraSaveFolder(fs::FS &fs)
@@ -113,13 +109,16 @@ void cameraSaveFolder(fs::FS &fs)
 void askSensor_ESP32CAM(uint8_t idx, bool forceAction)
 {
   if (isSensorDataReady(idx)) {
+    cliSerial->println("ESP32CAM - data ready, do nothing.");
     return;
   }
 
-  if (isSensorSkip(idx)) {
+  if (isSensorInSkip(idx)) {
+    sensors[currentRecordIndex].status.isPrepareMode = true;
     sensorSkip(idx);
     adjustWhiteBalance();
   } else {
+    sensors[currentRecordIndex].status.isPrepareMode = false;
     if (isTimeSynced || forceAction) {
       if (takePhoto(SD_MMC)) {
         setSensorValue(idx, 1);
@@ -130,12 +129,17 @@ void askSensor_ESP32CAM(uint8_t idx, bool forceAction)
   }
 }
 
+void disableSensor_ESP32CAM(uint8_t idx)
+{
+  // what can I do?
+}
+
 void adjustWhiteBalance()
 {
   fb = esp_camera_fb_get();
  
   if(!fb) {
-    cliSerial->println("WB: Camera capture failed");
+    cliSerial->println("ESP32CAM: WB failed");
     return;
   }
 
@@ -167,11 +171,9 @@ bool takePhoto(fs::FS &fs)
   
   File file = fs.open(path.c_str(), FILE_WRITE);
   if(!file){
-    cliSerial->printf("Picture file name: %s\n", path.c_str());
-    cliSerial->println("Failed to open file in writing mode");
+    cliSerial->printf("Failed to open file in writing mode: %s\n", path.c_str());
   } else {
     file.write(fb->buf, fb->len); // payload (image), payload length
-    cliSerial->printf("Saved file to path: %s\n", path.c_str());
     isSuccess = true;
   }
   file.close();
