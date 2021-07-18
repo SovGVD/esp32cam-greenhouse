@@ -15,7 +15,11 @@ void setupStorage()
   isStorageAvailable = true;
 
   appendSensor(0, SENSOR_SD_MMC, 0x0, VALUE_TYPE_STORAGE_USED);
+  cliSerial->print("SD_MMC ");
+  cliSerial->println(currentRecordIndex-1);
   appendSensor(0, SENSOR_SD_MMC, 0x0, VALUE_TYPE_STORAGE_TOTAL);
+  cliSerial->print("SD_MMC ");
+  cliSerial->println(currentRecordIndex-1);
 }
 
 void askSensor_SD_MMC(uint8_t idx, bool forceAction)

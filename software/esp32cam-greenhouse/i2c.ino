@@ -17,13 +17,22 @@ void i2cScan()
 
 void initPower()
 {
-//  if (ina219.init()) {
-//    appendSensor(0, SENSOR_INA219, 0x0, VALUE_TYPE_POWER_V);
-//    appendSensor(0, SENSOR_INA219, 0x0, VALUE_TYPE_POWER_A);
-//    cliSerial->println("INA219 power sensor detected");
-//  } else {
-//    cliSerial->println("INA219 - sensor is not available");
-//  }
+  if (ina219.init()) {
+    ina219.setADCMode(SAMPLE_MODE_16);
+    ina219.setMeasureMode(CONTINUOUS);
+    ina219.setPGain(PG_320);
+    ina219.setBusRange(BRNG_16);
+
+    appendSensor(0, SENSOR_INA219, 0x0, VALUE_TYPE_POWER_V);
+    cliSerial->print("INA219 ");
+    cliSerial->println(currentRecordIndex-1);
+    appendSensor(0, SENSOR_INA219, 0x0, VALUE_TYPE_POWER_A);
+    cliSerial->print("INA219 ");
+    cliSerial->println(currentRecordIndex-1);
+    cliSerial->println("INA219 power sensor detected");
+  } else {
+    cliSerial->println("INA219 - sensor is not available");
+  }
 }
 
 void initHumidity()
@@ -31,7 +40,11 @@ void initHumidity()
   hdc1080.begin(0x40);
   if (hdc1080.readDeviceId()) {
     appendSensor(0, SENSOR_HDC1080, 0x0, VALUE_TYPE_TEMPERATURE); // Temperature
+    cliSerial->print("HDC1080 ");
+    cliSerial->println(currentRecordIndex-1);
     appendSensor(0, SENSOR_HDC1080, 0x0, VALUE_TYPE_HUMIDITY);    // Humidity, set address to 0x0 to use previusly requested sensor as it is just one sensor
+    cliSerial->print("HDC1080 ");
+    cliSerial->println(currentRecordIndex-1);
     cliSerial->println("HDC1080 Humidity and Temperature sensor detected");
   } else {
     cliSerial->println("HDC1080 - sensor is not available");
@@ -52,7 +65,11 @@ void initAir()
     }
 
     appendSensor(0, SENSOR_CCS811, 0x0, VALUE_TYPE_CO2);
+    cliSerial->print("CCS811 ");
+    cliSerial->println(currentRecordIndex-1);
     appendSensor(0, SENSOR_CCS811, 0x0, VALUE_TYPE_TVOC);
+    cliSerial->print("CCS811 ");
+    cliSerial->println(currentRecordIndex-1);
     cliSerial->println("CCS811 air quality sensor detected");
   } else {
     cliSerial->println("CCS811 - sensor is not available");
@@ -72,9 +89,17 @@ void initSoil()
 
     // 4 channels
     appendSensor(0, SENSOR_ADS1115, 0x0, VALUE_TYPE_RAW);
+    cliSerial->print("ADC1115 ");
+    cliSerial->println(currentRecordIndex-1);
     appendSensor(0, SENSOR_ADS1115, 0x0, VALUE_TYPE_RAW);
+    cliSerial->print("ADC1115 ");
+    cliSerial->println(currentRecordIndex-1);
     appendSensor(0, SENSOR_ADS1115, 0x0, VALUE_TYPE_RAW);
+    cliSerial->print("ADC1115 ");
+    cliSerial->println(currentRecordIndex-1);
     appendSensor(0, SENSOR_ADS1115, 0x0, VALUE_TYPE_RAW);
+    cliSerial->print("ADC1115 ");
+    cliSerial->println(currentRecordIndex-1);
     cliSerial->println("ADC1115 based soil moisture sensor detected");
   } else {
     cliSerial->println("ADC1115 - sensor is not available");

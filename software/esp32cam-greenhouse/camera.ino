@@ -94,6 +94,8 @@ void setupCamera(fs::FS &fs)
 
   cliSerial->println("ESP32CAM init finished");
   appendSensor(0, SENSOR_ESP32CAM, 0x0, VALUE_TYPE_JPEG);
+  cliSerial->print("ESP32CAM ");
+  cliSerial->println(currentRecordIndex-1);
 }
 
 void cameraSaveFolder(fs::FS &fs)
@@ -115,6 +117,7 @@ void askSensor_ESP32CAM(uint8_t idx, bool forceAction)
   }
 
   if (isSensorSkip(idx)) {
+    sensorSkip(idx);
     adjustWhiteBalance();
   } else {
     if (isTimeSynced || forceAction) {

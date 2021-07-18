@@ -34,15 +34,8 @@ void sensorSkip(uint8_t idx)
 
 bool isSensorSkip(uint8_t idx)
 {
-  if (sensors[idx].settings.skip > 0) {
-    sensors[idx].settingsState.skip++;
-
-    if (sensors[idx].settings.skip >= sensors[idx].settingsState.skip) {
-      return true;
-    }
-  }
-
-  return false;
+  return sensors[idx].settings.skip > 0
+      && sensors[idx].settings.skip >= sensors[idx].settingsState.skip;
 }
 
 void sensorRetry(uint8_t idx)
@@ -63,15 +56,22 @@ bool isSensorRetryFailed(uint8_t idx)
   return false;
 }
 
+bool isSensorContinuousReading(uint8_t idx)
+{
+  return sensors[idx].settings.average == 0;
+}
+
 void setSensorValue(uint8_t idx, double value)
 {
   // Skip sensor values
   if (isSensorSkip(idx)) {
+    sensorSkip(idx);
     return;
   }
 
-  if (sensors[idx].settings.average == 0) {
-    if (!sensors[idx].status.isDataReady) {
+  if (isSensorContinuousReading(idx)) {
+    if (!isSensorDataReady(idx)) {
+      // First reading
       sensors[idx].value.value = value;
     } else if (sensors[idx].settings.storeMax && value > sensors[idx].value.value) {
       sensors[idx].value.value = value;
@@ -83,14 +83,15 @@ void setSensorValue(uint8_t idx, double value)
     return;
   }
 
-  sensors[idx].value.value += value;
 
   // We don't need calculate average
   if (sensors[idx].settings.average == 1) {
+    sensors[idx].value.value = value;
     sensors[idx].status.isDataReady = true;
     return;
   }
 
+  sensors[idx].value.value += value;
   sensors[idx].settingsState.average++;
 
   if (sensors[idx].settings.average == sensors[idx].settingsState.average) {

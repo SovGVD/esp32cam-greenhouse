@@ -62,9 +62,11 @@ typedef struct {
 } recordStructure;
 
 // Sensors:
-// 0x40 HDC1080          Humidity/Temperature
-// 0x5A CCS811           Air Quality
-// 0x48 ADS1115/ADS1015  ADC (soil sensors)
+// Default  Expected  Device           Description
+//    0x40            HDC1080          Humidity/Temperature
+//    0x40      0x41  INA219           Power sensor
+//    0x5A            CCS811           Air Quality
+//    0x48            ADS1115/ADS1015  ADC (soil sensors)
 
 #define SENSOR_ERROR_VALUE -99999.9
 
@@ -93,10 +95,10 @@ typedef struct {
 
 // {skip, retry, average}
 settingsStructure defaultSettings[SENSORS_NUM] = {
-  {4, 0, 1},  // SENSOR_ESP32CAM
-  {0, 0, 0},  // SENSOR_SD_MMC
-  {0, 0, 0},  // SENSOR_POWER
-  {0, 5, 3},  // SENSOR_HDC1080
-  {0, 5, 3},  // SENSOR_CCS811
-  {0, 2, 3}   // SENSOR_ADS1115
+  {4, 0, 1, true},  // SENSOR_ESP32CAM
+  {0, 0, 0, true},  // SENSOR_SD_MMC
+  {0, 0, 0, true},  // SENSOR_POWER
+  {0, 5, 3, true},  // SENSOR_HDC1080
+  {0, 5, 3, true},  // SENSOR_CCS811
+  {0, 2, 3, true}   // SENSOR_ADS1115
 };

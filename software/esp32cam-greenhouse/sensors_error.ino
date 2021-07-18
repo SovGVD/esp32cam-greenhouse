@@ -1,3 +1,8 @@
+void askSensor_INA219_error_noData(uint8_t idx)
+{
+  askSensor_markAsFailed(idx);
+}
+
 void askSensor_HDC1080_error_noData(uint8_t idx)
 {
   askSensor_markAsFailed(idx);

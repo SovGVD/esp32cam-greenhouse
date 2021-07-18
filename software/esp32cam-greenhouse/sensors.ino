@@ -19,6 +19,12 @@ void askSensors(bool forceAction)
       continue;
     }
 
+//    cliSerial->print(idx);
+//    cliSerial->print(isSensorSkip(idx) ? " skip " : "  do  ");
+//    cliSerial->print(isSensorDataReady(idx) ? " DA " : " -- ");
+//    cliSerial->print(sensors[idx].settings.retry > 0 ? (isSensorRetryFailed(idx) ? " RF ": " RP ") : " RN "); // Retry: Fail, Progress, No (no retry)
+//    cliSerial->println(" sensor ask");
+
     switch(sensors[idx].device.type) {
       #ifdef CAMERA_ENABLED
         case SENSOR_ESP32CAM:
@@ -51,7 +57,25 @@ void askSensors(bool forceAction)
 
 void askSensor_INA219(uint8_t idx, bool forceAction)
 {
-  // TODO
+  // TODO what if another address?
+
+  if (!ina219.getOverflow()) {
+    switch(sensors[idx].value.valueType) {
+      case VALUE_TYPE_POWER_V:
+        setSensorValue(idx, ina219.getBusVoltage_V() + ina219.getShuntVoltage_mV() / 1000);
+        break;
+
+      case VALUE_TYPE_POWER_A:
+        setSensorValue(idx, ina219.getCurrent_mA() / 1000);
+        break;
+
+      default:
+        askSensor_INA219_error_noData(idx);
+        return;
+    }
+  } else {
+    sensorRetry(idx);
+  }
 }
 
 void askSensor_HDC1080(uint8_t idx, bool forceAction)
@@ -88,7 +112,6 @@ void askSensor_HDC1080(uint8_t idx, bool forceAction)
     default:
       askSensor_HDC1080_error_noData(idx);
       return;
-      break;
   }
 }
 
